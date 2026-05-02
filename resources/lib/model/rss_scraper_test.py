@@ -1,11 +1,12 @@
-import unittest
-from rss_scraper import NewTalksRss
 from datetime import datetime
-import sys
 try:
     from elementtree.ElementTree import fromstring
 except ImportError:
     from xml.etree.ElementTree import fromstring
+import unittest
+from mock import MagicMock
+
+from rss_scraper import NewTalksRss
 
 minimal_item = """
 <item xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:media="http://search.yahoo.com/mrss/">
@@ -22,7 +23,8 @@ minimal_item = """
 class TestNewTalksRss(unittest.TestCase):
 
     def setUp(self):
-        self.talks = NewTalksRss(lambda x: sys.stdout.write(x))
+        self.logger = MagicMock()
+        self.talks = NewTalksRss(self.logger)
 
     def test_get_talk_details_minimal(self):
         details = self.talks.get_talk_details(fromstring(minimal_item))
@@ -30,10 +32,11 @@ class TestNewTalksRss(unittest.TestCase):
             'author':'Dovahkiin',
             'date':'04.02.2012',
             'link':'invalid://nowhere/nothing.html',
+            'mediatype':'video',
             'thumb':'invalid://nowhere/nothing.jpg',
             'title':'fus ro dah',
             'plot':'Unrelenting Force',
-            'duration':3723
+            'duration':3723.0
         }
         self.assertEqual(expected_details, details)
 
@@ -44,18 +47,20 @@ class TestNewTalksRss(unittest.TestCase):
         document = fromstring(minimal_item)
         document.find('./pubDate').text = "Sat, 04 02 2012 08:14:00"  # Same date, different formatting
         details = self.talks.get_talk_details(document)
-        date_now = datetime.strftime(datetime.now(), "%d.%m.%Y")
+        date_now = datetime.strftime(datetime.now(), '%d.%m.%Y')
         self.assertEqual(date_now, details['date'])
+        self.logger.assert_called_with("Could not parse date 'Sat, 04 02 2012 08': time data 'Sat, 04 02 2012 08' does not match format '%a, %d %b %Y %H:%M:%S'")
 
     def test_smoke(self):
         talks = list(self.talks.get_new_talks())
         self.assertTrue(len(talks) > 10)  # If there are less then this than worry?
         talk = talks[0]  # Sanity check on most recent talk
-        self.assertEqual(7, len(talk))
+        self.assertEqual(8, len(talk))
         self.assertIsNotNone(talk['author'])
         self.assertIsNotNone(talk['date'])
         self.assertIsNotNone(talk['link'])
         self.assertIsNotNone(talk['thumb'])
         self.assertIsNotNone(talk['title'])
+        self.assertIsNotNone(talk['mediatype'])
         self.assertIsNotNone(talk['plot'])
         self.assertIsNotNone(talk['duration'])

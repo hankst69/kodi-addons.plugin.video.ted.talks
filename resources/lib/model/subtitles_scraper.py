@@ -6,9 +6,6 @@ http://estebanordano.com.ar/wp-content/uploads/2010/01/TEDTalkSubtitles.py_.zip
 '''
 import json
 import urllib
-import re
-# Custom xbmc thing for fast parsing. Can't rely on lxml being available as of 2012-03.
-import CommonFunctions as xbmc_common
 
 __friendly_message__ = 'Error showing subtitles'
 __talkIdKey__ = 'id'
@@ -33,7 +30,7 @@ def __get_languages__(talk_json):
     '''
     Get languages for a talk, or empty array if we fail.
     '''
-    return [l['languageCode'] for l in talk_json['languages']]
+    return [l['languageCode'] for l in talk_json['player_talks'][0]['languages']]
 
 def get_subtitles(talk_id, language, logger):
     url = 'http://www.ted.com/talks/subtitles/id/%s/lang/%s' % (talk_id, language)
@@ -48,10 +45,15 @@ def get_subtitles_for_talk(talk_json, accepted_languages, logger):
     Return subtitles in srt format, or notify the user and return None if there was a problem.
     '''
     talk_id = talk_json['id']
-    intro_duration = talk_json['introDuration']
+    intro_duration = talk_json['player_talks'][0]['introDuration']
+
+    logger('%s = %s' % ('intro_duration', intro_duration), level='debug')
 
     try:
         languages = __get_languages__(talk_json)
+
+        logger('%s = %s' % ('languages', languages), level='debug')
+        logger('%s = %s' % ('accepted_languages', accepted_languages), level='debug')
 
         if len(languages) == 0:
             msg = 'No subtitles found'
@@ -60,7 +62,7 @@ def get_subtitles_for_talk(talk_json, accepted_languages, logger):
 
         language_matches = [l for l in accepted_languages if l in languages]
         if not language_matches:
-            msg = 'No subtitles in: %s' % (",".join(accepted_languages))
+            msg = 'No subtitles in: %s' % (','.join(accepted_languages))
             logger(msg, msg)
             return None
 

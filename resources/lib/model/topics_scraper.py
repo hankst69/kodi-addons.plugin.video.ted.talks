@@ -1,6 +1,8 @@
-from url_constants import URLTED, URLTOPICS
-# Custom xbmc thing for fast parsing. Can't rely on lxml being available as of 2012-03.
+import HTMLParser
+
 import CommonFunctions as xbmc_common
+
+from url_constants import URLTED, URLTOPICS
 
 class Topics:
 
@@ -10,16 +12,16 @@ class Topics:
 
     def get_topics(self):
         html = self.get_HTML(URLTOPICS)
-        for topic_div in xbmc_common.parseDOM(html, 'div', {'class':'topics__list__topic'}):
-            title = xbmc_common.parseDOM(topic_div, 'a')[0]
-            link = xbmc_common.parseDOM(topic_div, 'a', ret='href')[0]
-            topic = link.split('/')[-1]
-            yield title, topic
+        for li in xbmc_common.parseDOM(html, 'li', attrs={'class':'d:b'}):
+            link = xbmc_common.parseDOM(li, 'a', ret='href')
+            if link and link[0].startswith('/topics/'):
+                title = xbmc_common.parseDOM(li, 'span')[0]
+                topic = link[0][len('/topics/'):]
+                yield title, topic
 
 
     def get_talks(self, topic):
         page = 0
-
         while True:
             page += 1
             url = URLTED + '/talks?page={page}&topics%5B%5D={topic}'.format(page=page, topic=topic)
@@ -29,6 +31,7 @@ class Topics:
                 self.logger('Empty page requested? Please report this message.')
                 break
 
+            html_parser = HTMLParser.HTMLParser()
             for talk in talks:
                 link = [href for href in xbmc_common.parseDOM(talk, 'a', ret='href') if '/talks' in href][0]
                 title = img = speaker = None
@@ -36,11 +39,11 @@ class Topics:
                 if description:
                     anchors = xbmc_common.parseDOM(description, 'a')
                     if anchors:
-                        title = anchors[0]
+                        title = html_parser.unescape(anchors[0])
                     speakers = xbmc_common.parseDOM(description, 'h4', {'class':'[^\'"]*talk-link__speaker[^\'"]*'})
                     if speakers:
                         speaker = speakers[0]
-                    imgs = [src for src in xbmc_common.parseDOM(talk, 'img', ret='src') if 'images.ted.com' in src]
+                    imgs = [src for src in xbmc_common.parseDOM(talk, 'img', ret='src') if 'images/ted' in src]
                     if imgs:
                         img = imgs[0]
 

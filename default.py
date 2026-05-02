@@ -7,7 +7,6 @@ import resources.lib.plugin as plugin
 import resources.lib.settings as settings
 import resources.lib.model.arguments as arguments
 
-
 if __name__ == "__main__":
     plugin.init()
     settings.init()

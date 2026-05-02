@@ -4,10 +4,11 @@ but this allows us a little more power to tweak things how we want them,
 so keep it for now.
 """
 
-import urllib2
-import time
-
 from datetime import timedelta
+import time
+import urllib2
+
+
 try:
     from elementtree.ElementTree import fromstring
 except ImportError:
@@ -24,7 +25,7 @@ def get_document(url):
         usock.close()
 
 
-class NewTalksRss:
+class NewTalksRss(object):
     """
     Fetches new talks from RSS stream.
     """
@@ -39,6 +40,9 @@ class NewTalksRss:
         title = item.find('./{http://www.itunes.com/dtds/podcast-1.0.dtd}subtitle').text  # <title> tag has unecessary padding strings
         author = item.find('./{http://www.itunes.com/dtds/podcast-1.0.dtd}author').text
         pic = item.find('./{http://search.yahoo.com/mrss/}thumbnail').get('url')
+
+        self.logger('%s = %s' % ('pic', str(pic)), level='debug')
+
         duration = item.find('./{http://www.itunes.com/dtds/podcast-1.0.dtd}duration').text
         duration = time.strptime(duration, '%H:%M:%S')
         duration_seconds = self.__total_seconds__(timedelta(hours=duration.tm_hour, minutes=duration.tm_min, seconds=duration.tm_sec))
@@ -54,7 +58,7 @@ class NewTalksRss:
             date = time.localtime()
         date = time.strftime("%d.%m.%Y", date)
 
-        return {'title':title, 'author':author, 'thumb':pic, 'plot':plot, 'duration':duration_seconds, 'date':date, 'link':link}
+        return {'title':title, 'author':author, 'thumb':pic, 'plot':plot, 'duration':duration_seconds, 'date':date, 'link':link, 'mediatype': "video"}
 
     def __total_seconds__(self, delta):
         try:
@@ -67,11 +71,11 @@ class NewTalksRss:
         """
         Returns talks as dicts {title:, author:, thumb:, date:, duration:, link:}.
         """
-        talksByTitle = {}
+        talks_by_title = {}
         rss = get_document('http://feeds.feedburner.com/tedtalks_video')
         for item in fromstring(rss).findall('channel/item'):
             talk = self.get_talk_details(item)
-            talksByTitle[talk['title']] = talk
+            talks_by_title[talk['title']] = talk
 
-        return talksByTitle.itervalues()
+        return talks_by_title.itervalues()
 

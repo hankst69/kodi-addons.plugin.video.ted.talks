@@ -1,9 +1,10 @@
-import urllib
-from url_constants import URLTED, URLSEARCH
-# Custom xbmc thing for fast parsing. Can't rely on lxml being available as of 2012-03.
-import CommonFunctions as xbmc_common
-import re
 import HTMLParser
+import re
+import urllib
+
+import CommonFunctions as xbmc_common
+
+from url_constants import URLTED, URLSEARCH
 
 __results_count_re__ = re.compile(r'.*\d+ - (\d+) of (\d+) results.*')
 __result_count_re__ = re.compile(r'.*\d+ +results?.*')  # Two spaces at the moment i.e. "1  result"
@@ -36,13 +37,12 @@ class Search:
             yield title, url, img
 
     def results_remaining(self, html):
-        search_results = xbmc_common.parseDOM(html, 'div', {'class': 'heading search__results__heading'})
-        if search_results:
-            results_count_matches = __results_count_re__.findall(search_results[0])
-            if results_count_matches:
-                match = results_count_matches[0]
-                return int(match[1]) - int(match[0])
-            if __result_count_re__.findall(search_results[0]):
-                return 0  # All results on this page
+        results_count_matches = __results_count_re__.findall(html)
+        if results_count_matches:
+            match = results_count_matches[0]
+            return int(match[1]) - int(match[0])
+
+        if __result_count_re__.findall(html):
+            return 0  # All results on this page
         # We don't know so just make sure that it is positive so that we keep paging.
         return 1
